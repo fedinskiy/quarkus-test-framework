@@ -9,6 +9,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.hibernate.reactive.mutiny.Mutiny;
 
+import io.quarkus.qe.Book;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 
@@ -23,6 +24,7 @@ public class Library {
     }
 
     @GET
+    @Path("books")
     public Multi<String> all() {
         return client.withSession(session -> session.createQuery("Select title from Book").getResultList())
                 .toMulti()
@@ -31,12 +33,11 @@ public class Library {
     }
 
     @GET
-    @Path("{id}")
-    public Uni<String> all(String id) {
+    @Path("books/{id}")
+    public Uni<String> find(Integer id) {
         return client.withSession(session -> {
-            return session.createQuery("Select title from Book")
-                    .getResultList()
-                    .map(list -> list.get(0))
+            return session.find(Book.class, id)
+                    .map(Book::getTitle)
                     .onItem().castTo(String.class);
         });
     }

@@ -34,16 +34,28 @@ public class LibraryIT {
 
     @Test
     public void testUniEndpoint() {
-        given()
-                .when().get("/library/1")
+        String title = given()
+                .when().get("/library/books/1")
                 .then()
-                .statusCode(200);
+                .statusCode(200)
+                .extract().body().asString();
+        Assertions.assertEquals("Slovník", title);
+    }
+
+    @Test
+    public void testFind() {
+        String title = given()
+                .when().get("/library/books/2")
+                .then()
+                .statusCode(200)
+                .extract().body().asString();
+        Assertions.assertEquals("Thinking fast and slow", title);
     }
 
     @Test
     public void testMultiEndpoint() {
         String result = given()
-                .when().get("/library")
+                .when().get("/library/books")
                 .then()
                 .statusCode(200)
                 .extract().body().asString();
@@ -52,7 +64,7 @@ public class LibraryIT {
     }
 
     @Test
-    public void testSubEndpoint() {
+    public void testQuery() {
         given()
                 .when().get("/library/author/1")
                 .then()

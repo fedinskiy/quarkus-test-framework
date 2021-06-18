@@ -382,6 +382,7 @@
                 <module>examples/database-mysql</module>
                 <module>examples/external-applications</module>
                 <module>examples/tracing-extension</module>
+                <module>examples/reactive-hibernate</module>
             </modules>
         </profile>
         <profile>

@@ -1,7 +1,5 @@
 package io.quarkus.qe;
 
-import java.util.List;
-
 import javax.persistence.EntityManagerFactory;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -62,16 +60,15 @@ public class Library {
 
     @GET
     @Path("author/{name}")
-    public Uni<List<String>> search(String name) {
+    public Multi<String> search(String name) {
         System.out.println("Looking for " + name);
         return client
                 .withSession(session -> session.createQuery("Select author from Author author where name=:name", Author.class)
                         .setParameter("name", name)
-                        .getResultList()
-                        .toMulti()
-                        .flatMap(list -> Multi.createFrom().iterable(list))
-                        .flatMap(author -> Multi.createFrom().iterable(author.getBooks()))
-                        .map(Book::getTitle)
-                        .collect().asList());
+                        .getResultList())
+                .toMulti()
+                .flatMap(list -> Multi.createFrom().iterable(list))
+                .flatMap(author -> Multi.createFrom().iterable(author.getBooks()))
+                .map(Book::getTitle);
     }
 }

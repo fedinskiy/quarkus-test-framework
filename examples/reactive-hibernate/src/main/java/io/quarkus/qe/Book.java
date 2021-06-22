@@ -19,6 +19,9 @@ public class Book {
     @Size(max = REASONABLY_LONG_TEXT)
     private String title;
 
+    @NotNull
+    private Integer author;
+
     public Book(String title) {
         this.title = title;
     }

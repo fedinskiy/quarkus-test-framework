@@ -74,11 +74,21 @@ public class LibraryIT {
     @Test
     public void testJoinSearch() {
         String result = given()
-                .when().get("/library/author/Kahneman")
+                .when().get("/library/books/author/Kahneman")
                 .then()
                 .statusCode(200)
                 .extract().body().asString();
         Assertions.assertTrue(result.contains("Attention and Effort"));
         Assertions.assertTrue(result.contains("Thinking fast and slow"));
+    }
+
+    @Test
+    public void testAuthor() {
+        String result = given()
+                .when().get("/library/author/2")
+                .then()
+                .statusCode(200)
+                .extract().body().asString();
+        Assertions.assertEquals("Vern", result);
     }
 }

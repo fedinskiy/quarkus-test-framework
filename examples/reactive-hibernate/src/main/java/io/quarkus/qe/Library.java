@@ -8,8 +8,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import org.hibernate.reactive.mutiny.Mutiny;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
@@ -18,7 +16,6 @@ import io.smallrye.mutiny.Uni;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class Library {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Library.class);
     private final Mutiny.SessionFactory client;
 
     public Library(EntityManagerFactory entityManagerFactory) {
@@ -28,7 +25,6 @@ public class Library {
     @GET
     @Path("books")
     public Multi<String> all() {
-        LOGGER.info("Getting books");
         return client.withSession(session -> session.createQuery("Select title from Book", String.class).getResultList())
                 .toMulti()
                 .flatMap(list -> Multi.createFrom().iterable(list))
@@ -38,7 +34,6 @@ public class Library {
     @GET
     @Path("books/{id}")
     public Uni<String> find(Integer id) {
-        LOGGER.info("Getting book " + id);
         return client.withSession(session -> {
             return session.find(Book.class, id)
                     .map(Book::getTitle)
@@ -49,8 +44,6 @@ public class Library {
     @GET
     @Path("author/")
     public Uni<String> author() {
-        LOGGER.info("Getting name");
-        System.out.println("Getting name");
         return client.withSession(session -> {
             return session.createQuery("Select name from Author", String.class)
                     .getResultList()
@@ -59,9 +52,18 @@ public class Library {
     }
 
     @GET
-    @Path("author/{name}")
+    @Path("author/{id}")
+    public Uni<String> author(Integer id) {
+        return client.withSession(session -> {
+            return session.createQuery("Select name from Author author where id=:id", String.class)
+                    .setParameter("id", id)
+                    .getSingleResult();
+        });
+    }
+
+    @GET
+    @Path("books/author/{name}")
     public Multi<String> search(String name) {
-        System.out.println("Looking for " + name);
         return client
                 .withSession(session -> session.createQuery("Select author from Author author where name=:name", Author.class)
                         .setParameter("name", name)

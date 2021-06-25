@@ -3,6 +3,7 @@ package io.quarkus.qe;
 import javax.persistence.EntityManagerFactory;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -58,6 +59,19 @@ public class Library {
             return session.createQuery("Select name from Author author where id=:id", String.class)
                     .setParameter("id", id)
                     .getSingleResult();
+        });
+    }
+
+    @PUT
+    @Path("author/{name}")
+    public Uni<Void> createAuthor(String name) {
+        Author author = new Author();
+        author.setName(name);
+        return client.withSession(session -> {
+            return session.persist(author)
+                    .onItem().call(nothing -> {
+                        return session.flush();
+                    });
         });
     }
 

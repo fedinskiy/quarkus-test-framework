@@ -91,4 +91,17 @@ public class LibraryIT {
                 .extract().body().asString();
         Assertions.assertEquals("Vern", result);
     }
+
+    @Test
+    public void testCreation() {
+        given().put("library/author/Wodehouse")
+                .then()
+                .statusCode(204);
+        String result = given()
+                .when().get("/library/author/5")
+                .then()
+                .statusCode(200)
+                .extract().body().asString();
+        Assertions.assertEquals("Wodehouse", result);
+    }
 }

@@ -5,6 +5,7 @@ import static javax.persistence.CascadeType.PERSIST;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -14,12 +15,16 @@ import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
+import org.hibernate.annotations.GenericGenerator;
+
 @Entity
 @Table(name = "authors")
 public class Author {
     private static final int REASONABLY_LONG_TEXT = 100;
     @Id
-    @GeneratedValue
+    @Column(name = "id")
+    @GeneratedValue(generator = "authorIds")
+    @GenericGenerator(name = "authorIds", strategy = "io.quarkus.qe.IdGenerator")
     private Integer id;
 
     @NotNull
@@ -31,6 +36,10 @@ public class Author {
 
     public String getName() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public List<Book> getBooks() {

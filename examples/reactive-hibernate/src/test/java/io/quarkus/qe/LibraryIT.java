@@ -104,4 +104,17 @@ public class LibraryIT {
                 .extract().body().asString();
         Assertions.assertEquals("Wodehouse", result);
     }
+
+    @Test
+    public void testGeneratedId() {
+        given().put("library/books/2/Around_the_World_in_Eighty_Days")
+                .then()
+                .statusCode(204);
+        String result = given()
+                .when().get("library/books/author/Vern")
+                .then()
+                .statusCode(200)
+                .extract().body().asString();
+        Assertions.assertEquals("[Around_the_World_in_Eighty_Days]", result);
+    }
 }

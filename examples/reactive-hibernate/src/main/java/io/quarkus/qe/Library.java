@@ -75,6 +75,20 @@ public class Library {
         });
     }
 
+    @PUT
+    @Path("books/{author}/{name}")
+    public Uni<Void> createBook(Integer author, String name) {
+        Book book = new Book();
+        book.setAuthor(author);
+        book.setTitle(name);
+        return client.withSession(session -> {
+            return session.persist(book)
+                    .onItem().call(nothing -> {
+                        return session.flush();
+                    });
+        });
+    }
+
     @GET
     @Path("books/author/{name}")
     public Multi<String> search(String name) {

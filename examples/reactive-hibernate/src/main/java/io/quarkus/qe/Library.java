@@ -55,11 +55,13 @@ public class Library {
     @GET
     @Path("author/{id}")
     public Uni<String> author(Integer id) {
-        return client.withSession(session -> {
-            return session.createQuery("Select name from Author author where id=:id", String.class)
-                    .setParameter("id", id)
-                    .getSingleResult();
-        });
+        Mutiny.Session session = client.openSession();
+
+        Uni<String> result = session.createQuery("Select name from Author author where id=:id", String.class)
+                .setParameter("id", id)
+                .getSingleResult();
+        session.close();
+        return result;
     }
 
     @PUT

@@ -20,7 +20,7 @@ import org.hibernate.annotations.GenericGenerator;
 @Entity
 @Table(name = "authors")
 public class Author {
-    private static final int REASONABLY_LONG_TEXT = 100;
+    private static final int REASONABLY_LONG_TEXT = 10;
     @Id
     @Column(name = "id")
     @GeneratedValue(generator = "authorIds")

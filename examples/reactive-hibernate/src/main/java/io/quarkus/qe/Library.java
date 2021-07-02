@@ -2,11 +2,13 @@ package io.quarkus.qe;
 
 import javax.persistence.EntityManagerFactory;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.hibernate.reactive.mutiny.Mutiny;
 
@@ -34,12 +36,12 @@ public class Library {
 
     @GET
     @Path("books/{id}")
-    public Uni<String> find(Integer id) {
-        return client.withSession(session -> {
-            return session.find(Book.class, id)
-                    .map(Book::getTitle)
-                    .onItem().castTo(String.class);
-        });
+    public Uni<Response> find(Integer id) {
+        return client.withSession(session -> session.find(Book.class, id)
+                .map(book -> book == null
+                        ? Response.status(Response.Status.NOT_FOUND)
+                        : Response.ok(book.getTitle()))
+                .map(Response.ResponseBuilder::build));
     }
 
     @GET
@@ -54,14 +56,17 @@ public class Library {
 
     @GET
     @Path("author/{id}")
-    public Uni<String> author(Integer id) {
+    public Uni<Response> author(Integer id) {
         Mutiny.Session session = client.openSession();
-
         Uni<String> result = session.createQuery("Select name from Author author where id=:id", String.class)
                 .setParameter("id", id)
-                .getSingleResult();
+                .getSingleResultOrNull();
         session.close();
-        return result;
+        return result
+                .map(name -> name == null
+                        ? Response.status(Response.Status.NOT_FOUND)
+                        : Response.ok(name))
+                .map(Response.ResponseBuilder::build);
     }
 
     @PUT
@@ -75,6 +80,15 @@ public class Library {
                         return session.flush();
                     });
         });
+    }
+
+    @DELETE
+    @Path("author/{id}")
+    public Uni<Void> deleteAuthor(Integer id) {
+        return client
+                .withSession(session -> session.find(Author.class, id)
+                        .flatMap(session::remove)
+                        .flatMap(ignored -> session.flush()));
     }
 
     @PUT

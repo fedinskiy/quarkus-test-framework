@@ -10,6 +10,7 @@ import io.quarkus.test.bootstrap.RestService;
 import io.quarkus.test.scenarios.QuarkusScenario;
 import io.quarkus.test.services.Container;
 import io.quarkus.test.services.QuarkusApplication;
+import io.restassured.response.Response;
 
 @QuarkusScenario
 public class LibraryIT {
@@ -129,5 +130,15 @@ public class LibraryIT {
                 .statusCode(200)
                 .extract().body().asString();
         Assertions.assertEquals("[Around_the_World_in_Eighty_Days]", result);
+    }
+
+    @Test
+    public void deletion() {
+        given().delete("library/author/1")
+                .then()
+                .statusCode(204);
+        Response response = given()
+                .when().get("/library/author/1");
+        Assertions.assertEquals(404, response.statusCode());
     }
 }

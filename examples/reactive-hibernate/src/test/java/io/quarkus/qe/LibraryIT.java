@@ -1,16 +1,16 @@
 package io.quarkus.qe;
 
-import static io.restassured.RestAssured.given;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import io.quarkus.test.bootstrap.DefaultService;
 import io.quarkus.test.bootstrap.RestService;
 import io.quarkus.test.scenarios.QuarkusScenario;
 import io.quarkus.test.services.Container;
 import io.quarkus.test.services.QuarkusApplication;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static io.restassured.RestAssured.given;
 
 @QuarkusScenario
 public class LibraryIT {
@@ -95,9 +95,10 @@ public class LibraryIT {
 
     @Test
     public void testCreation() {
-        given().put("library/author/Wodehouse")
-                .then()
-                .statusCode(204);
+        Response post = given()
+                .contentType(ContentType.JSON)
+                .post("/library/author/Wodehouse");
+        Assertions.assertEquals(201, post.statusCode());
         String result = given()
                 .when().get("/library/author/5")
                 .then()
@@ -108,9 +109,11 @@ public class LibraryIT {
 
     @Test
     public void testTooLongName() {
-        given().put("library/author/Subrahmanyakavi")
+        given()
+                .contentType(ContentType.JSON)
+                .post("library/author/Subrahmanyakavi")
                 .then()
-                .statusCode(204);
+                .statusCode(201);
         String result = given()
                 .when().get("/library/author/6")
                 .then()

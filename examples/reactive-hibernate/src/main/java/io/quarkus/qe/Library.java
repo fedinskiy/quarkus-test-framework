@@ -4,6 +4,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -69,9 +70,10 @@ public class Library {
                 .map(Response.ResponseBuilder::build);
     }
 
-    @PUT
+    @POST
     @Path("author/{name}")
-    public Uni<Void> createAuthor(String name) {
+    public Uni<Response> createAuthor(String name) {
+        System.out.println("Creating " + name);
         Author author = new Author();
         author.setName(name);
         return client.withSession(session -> {
@@ -79,7 +81,8 @@ public class Library {
                     .onItem().call(nothing -> {
                         return session.flush();
                     });
-        });
+        })
+                .map(ignored -> Response.status(Response.Status.CREATED).build());
     }
 
     @DELETE

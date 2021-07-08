@@ -1,5 +1,10 @@
 package io.quarkus.qe;
 
+import static io.restassured.RestAssured.given;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import io.quarkus.test.bootstrap.DefaultService;
 import io.quarkus.test.bootstrap.RestService;
 import io.quarkus.test.scenarios.QuarkusScenario;
@@ -7,10 +12,6 @@ import io.quarkus.test.services.Container;
 import io.quarkus.test.services.QuarkusApplication;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
-import static io.restassured.RestAssured.given;
 
 @QuarkusScenario
 public class LibraryIT {
@@ -30,7 +31,7 @@ public class LibraryIT {
             .withProperty("quarkus.datasource.username", POSTGRES_USER)
             .withProperty("quarkus.datasource.password", POSTGRES_PASSWORD)
             .withProperty("quarkus.datasource.reactive.url",
-                    () -> database.getHost().replace("http", "postgresql") + ":" + database.getPort() + "/"
+                    () -> "vertx-reactive:" + database.getHost().replace("http", "postgresql") + ":" + database.getPort() + "/"
                             + POSTGRES_DATABASE);
 
     @Test

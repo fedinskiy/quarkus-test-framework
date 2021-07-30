@@ -14,13 +14,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import io.quarkus.qe.resources.JaegerContainer;
-import io.quarkus.test.bootstrap.RestService;
 import io.quarkus.test.scenarios.QuarkusScenario;
-import io.quarkus.test.services.QuarkusApplication;
 
 @QuarkusScenario
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -30,20 +29,18 @@ public class TracingExtensionBootstrapIT {
 
     static JaegerContainer jaegerContainer = new JaegerContainer();
 
-    @QuarkusApplication
-    static RestService app = new RestService();
-
     @BeforeAll
-    static public void tearUp() {
+    public static void tearUp() {
         jaegerContainer.start();
     }
 
     @AfterAll
-    static public void tearDown() {
+    public static void tearDown() {
         jaegerContainer.stop();
     }
 
     @Test
+    @Tag("custom-tag-example")
     @Order(1)
     public void successExample() {
         // This test is needed by 'shouldTraceSuccessTest', because will generate a trace on Jaeger
@@ -63,7 +60,8 @@ public class TracingExtensionBootstrapIT {
                                         "success=true",
                                         "bare-metal=true",
                                         "buildNumber=777-default",
-                                        "versionNumber=999-default")));
+                                        "versionNumber=999-default",
+                                        "custom-tag-example=true")));
     }
 
     @Test
@@ -88,6 +86,7 @@ public class TracingExtensionBootstrapIT {
                                         "error=true",
                                         "bare-metal=true",
                                         "buildNumber=777-default",
-                                        "versionNumber=999-default")));
+                                        "versionNumber=999-default",
+                                        "custom-tag-example=true")));
     }
 }

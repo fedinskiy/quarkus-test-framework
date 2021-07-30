@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -83,6 +82,8 @@ public class QuarkusScenarioBootstrap
 
     @Override
     public void beforeEach(ExtensionContext context) {
+        Log.info("## Running test " + context.getParent().map(ctx -> ctx.getDisplayName() + ".").orElse("") + context
+                .getDisplayName());
         extensions.forEach(ext -> ext.beforeEach(context));
         services.forEach(Service::start);
     }
@@ -120,6 +121,11 @@ public class QuarkusScenarioBootstrap
     @Override
     public void testFailed(ExtensionContext context, Throwable cause) {
         extensions.forEach(ext -> ext.onError(context, cause));
+    }
+
+    @Override
+    public void testDisabled(ExtensionContext context, Optional<String> reason) {
+        extensions.forEach(ext -> ext.onDisabled(context, reason));
     }
 
     @Override
@@ -251,7 +257,12 @@ public class QuarkusScenarioBootstrap
 
     private void configureLogging() {
         Locale.setDefault(new Locale("en", "EN"));
-        FileUtils.recreateDirectory(Paths.get(Log.LOG_OUTPUT_DIRECTORY));
+        try {
+            FileUtils.recreateDirectory(Log.LOG_OUTPUT_DIRECTORY);
+        } catch (RuntimeException ex) {
+            // ignore
+        }
+
         try (InputStream in = QuarkusScenarioBootstrap.class.getResourceAsStream("/logging.properties")) {
             LogManager.getLogManager().readConfiguration(in);
         } catch (IOException e) {

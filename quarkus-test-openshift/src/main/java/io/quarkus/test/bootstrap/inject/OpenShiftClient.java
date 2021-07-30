@@ -107,12 +107,44 @@ public final class OpenShiftClient {
      *
      * @param file
      */
-    public void apply(Service service, Path file) {
+    public void apply(Path file) {
+        applyInProject(file, currentNamespace);
+    }
+
+    /**
+     * Apply the file into OpenShift.
+     *
+     * @param file YAML file to apply
+     * @param project where to apply the YAML file.
+     */
+    public void applyInProject(Path file, String project) {
         try {
-            new Command(OC, "apply", "-f", file.toAbsolutePath().toString(), "-n", currentNamespace).runAndWait();
+            new Command(OC, "apply", "-f", file.toAbsolutePath().toString(), "-n", project).runAndWait();
         } catch (Exception e) {
-            fail("Failed to apply resource " + file.toAbsolutePath().toString() + " for " + service.getName() + " . Caused by "
-                    + e.getMessage());
+            fail("Failed to apply resource " + file.toAbsolutePath().toString() + " . Caused by " + e.getMessage());
+        }
+    }
+
+    /**
+     * Delete the file into OpenShift.
+     *
+     * @param file
+     */
+    public void delete(Path file) {
+        deleteInProject(file, currentNamespace);
+    }
+
+    /**
+     * Delete the file into OpenShift.
+     *
+     * @param file YAML file to apply
+     * @param project where to apply the YAML file.
+     */
+    public void deleteInProject(Path file, String project) {
+        try {
+            new Command(OC, "delete", "-f", file.toAbsolutePath().toString(), "-n", project).runAndWait();
+        } catch (Exception e) {
+            fail("Failed to apply resource " + file.toAbsolutePath().toString() + " . Caused by " + e.getMessage());
         }
     }
 
@@ -125,7 +157,7 @@ public final class OpenShiftClient {
     public void applyServicePropertiesUsingTemplate(Service service, String file, UnaryOperator<String> update, Path target) {
         String content = FileUtils.loadFile(file);
         content = enrichTemplate(service, update.apply(content));
-        apply(service, FileUtils.copyContentTo(content, target));
+        apply(FileUtils.copyContentTo(content, target));
     }
 
     /**
@@ -182,7 +214,8 @@ public final class OpenShiftClient {
         }
 
         try {
-            new Command(OC, "expose", "svc/" + serviceName, "--port=" + port, "-n", currentNamespace).runAndWait();
+            new Command(OC, "expose", "svc/" + serviceName, "--port=" + port, "-n", currentNamespace)
+                    .runAndWait();
         } catch (Exception e) {
             fail("Service failed to be exposed. Caused by " + e.getMessage());
         }
@@ -316,7 +349,7 @@ public final class OpenShiftClient {
         }
     }
 
-    public void installOperator(Service service, String channel, String source, String sourceNamespace) {
+    public void installOperator(Service service, String name, String channel, String source, String sourceNamespace) {
         // Install the operator group
         OperatorGroup groupModel = new OperatorGroup();
         groupModel.setMetadata(new ObjectMeta());
@@ -328,12 +361,12 @@ public final class OpenShiftClient {
         // Install the subscription
         Subscription subscriptionModel = new Subscription();
         subscriptionModel.setMetadata(new ObjectMeta());
-        subscriptionModel.getMetadata().setName(service.getName());
+        subscriptionModel.getMetadata().setName(name);
         subscriptionModel.getMetadata().setNamespace(currentNamespace);
 
         subscriptionModel.setSpec(new SubscriptionSpec());
         subscriptionModel.getSpec().setChannel(channel);
-        subscriptionModel.getSpec().setName(service.getName());
+        subscriptionModel.getSpec().setName(name);
         subscriptionModel.getSpec().setSource(source);
         subscriptionModel.getSpec().setSourceNamespace(sourceNamespace);
 
@@ -343,7 +376,7 @@ public final class OpenShiftClient {
         // Wait for the operator to be installed
         untilIsTrue(() -> {
             // Get Cluster Service Version
-            Subscription subscription = client.operatorHub().subscriptions().withName(service.getName()).get();
+            Subscription subscription = client.operatorHub().subscriptions().withName(name).get();
             String installedCsv = subscription.getStatus().getInstalledCSV();
             if (StringUtils.isEmpty(installedCsv)) {
                 return false;
@@ -409,12 +442,18 @@ public final class OpenShiftClient {
 
     /**
      * Returns whether the service name is a serverless (knative) service.
+     * If the underlying API returns an exception, it will return false.
      *
      * @param serviceName
      * @return
      */
     public boolean isServerlessService(String serviceName) {
-        return kn.services().withName(serviceName).get() != null;
+        try {
+            return kn.services().withName(serviceName).get() != null;
+        } catch (Exception ex) {
+            Log.warn("Failed to check serverless service. Will assume it's not serverless", ex);
+            return false;
+        }
     }
 
     /**

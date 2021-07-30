@@ -10,6 +10,7 @@ import java.util.ServiceLoader;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.exporter.ExplodedExporter;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.junit.jupiter.api.condition.OS;
 
 import io.quarkus.bootstrap.app.AugmentAction;
 import io.quarkus.bootstrap.app.AugmentResult;
@@ -22,12 +23,14 @@ import io.quarkus.test.services.QuarkusApplication;
 import io.quarkus.test.services.quarkus.model.LaunchMode;
 import io.quarkus.test.services.quarkus.model.QuarkusProperties;
 import io.quarkus.test.utils.FileUtils;
+import io.quarkus.test.utils.ReflectionUtils;
 
 public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplicationManagedResourceBuilder {
 
     private static final String NATIVE_RUNNER = "-runner";
+    private static final String EXE = ".exe";
     private static final String JVM_RUNNER = "-runner.jar";
-    private static final String QUARKUS_APP = "quarkus-app/";
+    private static final String QUARKUS_APP = "quarkus-app";
     private static final String QUARKUS_RUN = "quarkus-run.jar";
 
     private final ServiceLoader<QuarkusApplicationManagedResourceBinding> managedResourceBindingsRegistry = ServiceLoader
@@ -49,6 +52,7 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
     public void init(Annotation annotation) {
         QuarkusApplication metadata = (QuarkusApplication) annotation;
         setSslEnabled(metadata.ssl());
+        setGrpcEnabled(metadata.grpc());
         initAppClasses(metadata.classes());
     }
 
@@ -85,7 +89,13 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
         Optional<String> artifactLocation = Optional.empty();
         if (!containsBuildProperties() && !isSelectedAppClasses()) {
             if (QuarkusProperties.isNativePackageType(getContext())) {
-                artifactLocation = FileUtils.findTargetFile(NATIVE_RUNNER);
+                String nativeRunnerExpectedLocation = NATIVE_RUNNER;
+                if (OS.WINDOWS.isCurrentOs()) {
+                    nativeRunnerExpectedLocation += EXE;
+                }
+
+                artifactLocation = FileUtils.findTargetFile(nativeRunnerExpectedLocation);
+
             } else {
                 artifactLocation = FileUtils.findTargetFile(JVM_RUNNER)
                         .or(() -> FileUtils.findTargetFile(QUARKUS_APP, QUARKUS_RUN));
@@ -102,6 +112,7 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
     private Path buildArtifact() {
         try {
             Path appFolder = getContext().getServiceFolder();
+
             JavaArchive javaArchive = ShrinkWrap.create(JavaArchive.class).addClasses(getAppClasses());
             javaArchive.as(ExplodedExporter.class).exportExplodedInto(appFolder.toFile());
 
@@ -110,11 +121,18 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
             Path testLocation = PathTestHelper.getTestClassesLocation(getContext().getTestContext().getRequiredTestClass());
             QuarkusBootstrap.Builder builder = QuarkusBootstrap.builder().setApplicationRoot(appFolder)
                     .setMode(QuarkusBootstrap.Mode.PROD)
-                    .setLocalProjectDiscovery(true)
                     .addExcludedPath(testLocation)
+                    .setIsolateDeployment(true)
                     .setProjectRoot(testLocation)
                     .setBaseName(getContext().getName())
                     .setTargetDirectory(appFolder);
+
+            // The method `setLocalProjectDiscovery` signature changed from `Boolean` to `boolean` and this might make
+            // to fail the tests at runtime when using different versions.
+            // In order to workaround this, we need to invoke this method at runtime to let JVM unbox the arguments properly.
+            // Note that this is happening because we want to support both 2.x and 1.13.x Quarkus versions.
+            // Another strategy could be to have our own version of Quarkus bootstrap.
+            ReflectionUtils.invokeMethod(builder, "setLocalProjectDiscovery", true);
 
             AugmentResult result;
             try (CuratedApplication curatedApplication = builder.build().bootstrap()) {

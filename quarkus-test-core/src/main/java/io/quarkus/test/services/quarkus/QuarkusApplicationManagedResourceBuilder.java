@@ -2,13 +2,12 @@ package io.quarkus.test.services.quarkus;
 
 import static java.util.stream.Collectors.toSet;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,17 +22,23 @@ import io.quarkus.test.utils.PropertiesUtils;
 
 public abstract class QuarkusApplicationManagedResourceBuilder implements ManagedResourceBuilder {
 
+    public static final String QUARKUS_HTTP_PORT_PROPERTY = "quarkus.http.port";
+    public static final String QUARKUS_GRPC_SERVER_PORT_PROPERTY = "quarkus.grpc.server.port";
+    public static final String QUARKUS_HTTP_SSL_PORT_PROPERTY = "quarkus.http.ssl-port";
+    public static final int HTTP_PORT_DEFAULT = 8080;
+
     private static final String BUILD_TIME_PROPERTIES = "/build-time-list";
-    private static final String RESOURCES_FOLDER = "src/main/resources";
-    private static final String TEST_RESOURCES_FOLDER = "src/test/resources";
-    private static final String APPLICATION_PROPERTIES = "application.properties";
-    private static final List<String> RESOURCES_TO_COPY = Arrays.asList(".sql", ".keystore", ".truststore");
+    private static final Path RESOURCES_FOLDER = Paths.get("src", "main", "resources");
+    private static final Path TEST_RESOURCES_FOLDER = Paths.get("src", "test", "resources");
+    private static final String PROPERTIES_SUFFIX = ".properties";
+    private static final String APPLICATION_PROPERTIES = "application" + PROPERTIES_SUFFIX;
     private static final Set<String> BUILD_PROPERTIES = FileUtils.loadFile(BUILD_TIME_PROPERTIES).lines().collect(toSet());
 
     private Class<?>[] appClasses;
     private boolean selectedAppClasses = true;
     private ServiceContext context;
     private boolean sslEnabled = false;
+    private boolean grpcEnabled = false;
     private Map<String, String> propertiesSnapshot;
 
     protected abstract void build();
@@ -52,6 +57,14 @@ public abstract class QuarkusApplicationManagedResourceBuilder implements Manage
 
     protected void setSslEnabled(boolean sslEnabled) {
         this.sslEnabled = sslEnabled;
+    }
+
+    protected boolean isGrpcEnabled() {
+        return grpcEnabled;
+    }
+
+    protected void setGrpcEnabled(boolean grpcEnabled) {
+        this.grpcEnabled = grpcEnabled;
     }
 
     protected Class<?>[] getAppClasses() {
@@ -106,12 +119,25 @@ public abstract class QuarkusApplicationManagedResourceBuilder implements Manage
         return BUILD_PROPERTIES.stream().anyMatch(build -> name.matches(build) || name.startsWith(build));
     }
 
-    private void copyResourcesInFolderToAppFolder(String folder) {
+    private void copyResourcesInFolderToAppFolder(Path folder) {
         try (Stream<Path> binariesFound = Files
-                .find(Paths.get(folder), Integer.MAX_VALUE,
-                        (path, basicFileAttributes) -> RESOURCES_TO_COPY.stream()
-                                .anyMatch(filter -> path.toFile().getName().endsWith(filter)))) {
-            binariesFound.forEach(path -> FileUtils.copyFileTo(path.toFile(), context.getServiceFolder()));
+                .find(folder, Integer.MAX_VALUE,
+                        (path, basicFileAttributes) -> !Files.isDirectory(path)
+                                && !path.toFile().getName().contains(PROPERTIES_SUFFIX))) {
+            binariesFound.forEach(path -> {
+                File fileToCopy = path.toFile();
+
+                Path source = folder.relativize(path).getParent();
+                Path target = context.getServiceFolder();
+                if (source != null) {
+                    // Resource is in a sub-folder:
+                    target = target.resolve(source);
+                    // Create subdirectories if necessary
+                    target.toFile().mkdirs();
+                }
+
+                FileUtils.copyFileTo(fileToCopy, target);
+            });
         } catch (IOException ex) {
             // ignored
         }

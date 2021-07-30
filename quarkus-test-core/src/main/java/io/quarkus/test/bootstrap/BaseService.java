@@ -25,10 +25,11 @@ import io.quarkus.test.utils.PropertiesUtils;
 
 public class BaseService<T extends Service> implements Service {
 
+    public static final String SERVICE_STARTUP_TIMEOUT = "startup.timeout";
+    public static final Duration SERVICE_STARTUP_TIMEOUT_DEFAULT = Duration.ofMinutes(5);
+
     private static final String SERVICE_STARTUP_CHECK_POLL_INTERVAL = "startup.check-poll-interval";
     private static final Duration SERVICE_STARTUP_CHECK_POLL_INTERVAL_DEFAULT = Duration.ofSeconds(2);
-    private static final String SERVICE_STARTUP_TIMEOUT = "startup.timeout";
-    private static final Duration SERVICE_STARTUP_TIMEOUT_DEFAULT = Duration.ofMinutes(5);
 
     private final List<Action> onPreStartActions = new LinkedList<>();
     private final List<Action> onPostStartActions = new LinkedList<>();
@@ -92,14 +93,15 @@ public class BaseService<T extends Service> implements Service {
     @Override
     public boolean isRunning() {
         Log.debug(this, "Checking if resource is running");
-        boolean isRunning = managedResource != null && managedResource.isRunning();
-        if (isRunning) {
-            Log.debug(this, "Resource is running");
-        } else {
+        if (managedResource == null) {
             Log.debug(this, "Resource is not running");
+            return false;
+        } else if (managedResource.isFailed()) {
+            fail("Resource failed to start");
         }
 
-        return isRunning;
+        Log.debug(this, "Resource is running");
+        return managedResource.isRunning();
     }
 
     public String getHost() {
@@ -208,6 +210,7 @@ public class BaseService<T extends Service> implements Service {
                 .getAsDuration(SERVICE_STARTUP_TIMEOUT, SERVICE_STARTUP_TIMEOUT_DEFAULT);
         untilIsTrue(this::isRunning, AwaitilitySettings
                 .using(startupCheckInterval, startupTimeout)
+                .doNotIgnoreExceptions()
                 .withService(this)
                 .timeoutMessage("Service didn't start in %s minutes", startupTimeout));
     }

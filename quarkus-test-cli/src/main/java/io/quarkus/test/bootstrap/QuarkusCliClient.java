@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -16,6 +17,7 @@ import io.quarkus.test.configuration.PropertyLookup;
 import io.quarkus.test.logging.Log;
 import io.quarkus.test.services.quarkus.CliDevModeLocalhostQuarkusApplicationManagedResource;
 import io.quarkus.test.utils.FileUtils;
+import io.quarkus.test.utils.ProcessBuilderProvider;
 
 public class QuarkusCliClient {
 
@@ -66,9 +68,12 @@ public class QuarkusCliClient {
 
         // Generate project
         List<String> args = new ArrayList<>();
-        args.addAll(Arrays.asList("create", "app", "--artifact-id=" + name));
-        args.addAll(Arrays.asList(extensions));
-        Result result = runCliAndWait(args.toArray(new String[args.size()]));
+        args.addAll(Arrays.asList("create", "app", name));
+        if (extensions.length > 0) {
+            args.add("-x=" + Stream.of(extensions).collect(Collectors.joining(",")));
+        }
+
+        Result result = runCliAndWait(serviceContext.getServiceFolder().getParent(), args.toArray(new String[args.size()]));
         assertTrue(result.isSuccessful(), "The application was not created. Output: " + result.getOutput());
 
         return service;
@@ -103,7 +108,7 @@ public class QuarkusCliClient {
         Log.info(cmd.stream().collect(Collectors.joining(" ")));
 
         try {
-            return new ProcessBuilder(cmd)
+            return ProcessBuilderProvider.command(cmd)
                     .redirectErrorStream(true)
                     .redirectOutput(workingDirectory.resolve(LOG_FILE).toFile())
                     .directory(workingDirectory.toFile())

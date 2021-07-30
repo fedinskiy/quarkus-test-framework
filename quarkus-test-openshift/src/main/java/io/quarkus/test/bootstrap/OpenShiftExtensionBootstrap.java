@@ -1,6 +1,5 @@
 package io.quarkus.test.bootstrap;
 
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -59,7 +58,7 @@ public class OpenShiftExtensionBootstrap implements ExtensionBootstrap {
     public void onError(ExtensionContext context, Throwable throwable) {
         Map<String, String> logs = client.logs();
         for (Entry<String, String> podLog : logs.entrySet()) {
-            FileUtils.copyContentTo(podLog.getValue(), Paths.get(Log.LOG_OUTPUT_DIRECTORY, podLog.getKey() + Log.LOG_SUFFIX));
+            FileUtils.copyContentTo(podLog.getValue(), Log.LOG_OUTPUT_DIRECTORY.resolve(podLog.getKey() + Log.LOG_SUFFIX));
         }
     }
 
@@ -68,7 +67,8 @@ public class OpenShiftExtensionBootstrap implements ExtensionBootstrap {
         for (Operator operator : openShiftScenario.operators()) {
             Service defaultService = new DefaultService();
             defaultService.register(operator.name(), context);
-            client.installOperator(defaultService, operator.channel(), operator.source(), operator.sourceNamespace());
+            client.installOperator(defaultService, operator.name(), operator.channel(), operator.source(),
+                    operator.sourceNamespace());
         }
     }
 }

@@ -77,8 +77,7 @@ public class OperatorManagedResource implements ManagedResource {
         ServiceContext serviceContext = model.getContext();
         String content = FileUtils.loadFile(crd.getFile());
 
-        client.apply(serviceContext.getOwner(),
-                FileUtils.copyContentTo(content, serviceContext.getServiceFolder().resolve(crd.getName())));
+        client.apply(FileUtils.copyContentTo(content, serviceContext.getServiceFolder().resolve(crd.getName())));
 
         if (crd.getType().isPresent()) {
             crdsToWatch.add(crd);
@@ -91,6 +90,7 @@ public class OperatorManagedResource implements ManagedResource {
 
     private void installOperator() {
         client.installOperator(model.getContext().getOwner(),
+                model.getName(),
                 model.getChannel(),
                 model.getSource(),
                 model.getSourceNamespace());

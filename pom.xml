@@ -382,6 +382,7 @@
                 <module>examples/amq-amqp</module>
                 <module>examples/jaeger</module>
                 <module>examples/database-mysql</module>
+                <module>examples/database-minimal</module>
                 <module>examples/external-applications</module>
                 <module>examples/tracing-extension</module>
                 <module>examples/metrics-extension</module>

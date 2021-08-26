@@ -1,9 +1,11 @@
 package io.quarkus.test.services.quarkus;
 
+import static io.quarkus.test.utils.FileUtils.findTargetFile;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.annotation.Annotation;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.ServiceLoader;
 
@@ -20,12 +22,12 @@ import io.quarkus.test.bootstrap.ManagedResource;
 import io.quarkus.test.bootstrap.ServiceContext;
 import io.quarkus.test.common.PathTestHelper;
 import io.quarkus.test.services.QuarkusApplication;
-import io.quarkus.test.services.quarkus.model.LaunchMode;
 import io.quarkus.test.services.quarkus.model.QuarkusProperties;
-import io.quarkus.test.utils.FileUtils;
 import io.quarkus.test.utils.ReflectionUtils;
 
 public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplicationManagedResourceBuilder {
+
+    protected static final String TARGET = "target";
 
     private static final String NATIVE_RUNNER = "-runner";
     private static final String EXE = ".exe";
@@ -36,13 +38,8 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
     private final ServiceLoader<QuarkusApplicationManagedResourceBinding> managedResourceBindingsRegistry = ServiceLoader
             .load(QuarkusApplicationManagedResourceBinding.class);
 
-    private LaunchMode launchMode = LaunchMode.JVM;
     private Path artifact;
     private QuarkusManagedResource managedResource;
-
-    protected LaunchMode getLaunchMode() {
-        return launchMode;
-    }
 
     protected Path getArtifact() {
         return artifact;
@@ -69,13 +66,16 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
     }
 
     public void build() {
-        detectLaunchMode();
+        managedResource.onPreBuild();
+        copyResourcesToAppFolder();
         if (managedResource.needsBuildArtifact()) {
             tryToReuseOrBuildArtifact();
         }
+
+        managedResource.onPostBuild();
     }
 
-    private QuarkusManagedResource findManagedResource() {
+    protected QuarkusManagedResource findManagedResource() {
         for (QuarkusApplicationManagedResourceBinding binding : managedResourceBindingsRegistry) {
             if (binding.appliesFor(getContext())) {
                 return binding.init(this);
@@ -83,6 +83,10 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
         }
 
         return new ProdLocalhostQuarkusApplicationManagedResource(this);
+    }
+
+    protected Path getTargetFolderForLocalArtifacts() {
+        return Paths.get(TARGET);
     }
 
     private void tryToReuseOrBuildArtifact() {
@@ -94,11 +98,11 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
                     nativeRunnerExpectedLocation += EXE;
                 }
 
-                artifactLocation = FileUtils.findTargetFile(nativeRunnerExpectedLocation);
+                artifactLocation = findTargetFile(getTargetFolderForLocalArtifacts(), nativeRunnerExpectedLocation);
 
             } else {
-                artifactLocation = FileUtils.findTargetFile(JVM_RUNNER)
-                        .or(() -> FileUtils.findTargetFile(QUARKUS_APP, QUARKUS_RUN));
+                artifactLocation = findTargetFile(getTargetFolderForLocalArtifacts(), JVM_RUNNER)
+                        .or(() -> findTargetFile(getTargetFolderForLocalArtifacts().resolve(QUARKUS_APP), QUARKUS_RUN));
             }
         }
 
@@ -111,12 +115,11 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
 
     private Path buildArtifact() {
         try {
-            Path appFolder = getContext().getServiceFolder();
+            createSnapshotOfBuildProperties();
+            Path appFolder = getApplicationFolder();
 
             JavaArchive javaArchive = ShrinkWrap.create(JavaArchive.class).addClasses(getAppClasses());
             javaArchive.as(ExplodedExporter.class).exportExplodedInto(appFolder.toFile());
-
-            copyResourcesToAppFolder();
 
             Path testLocation = PathTestHelper.getTestClassesLocation(getContext().getTestContext().getRequiredTestClass());
             QuarkusBootstrap.Builder builder = QuarkusBootstrap.builder().setApplicationRoot(appFolder)
@@ -148,16 +151,6 @@ public class ProdQuarkusApplicationManagedResourceBuilder extends QuarkusApplica
         }
 
         return null;
-    }
-
-    private void detectLaunchMode() {
-        if (QuarkusProperties.isNativePackageType(getContext())) {
-            launchMode = LaunchMode.NATIVE;
-        } else if (QuarkusProperties.isLegacyJarPackageType(getContext())) {
-            launchMode = LaunchMode.LEGACY_JAR;
-        } else {
-            launchMode = LaunchMode.JVM;
-        }
     }
 
 }

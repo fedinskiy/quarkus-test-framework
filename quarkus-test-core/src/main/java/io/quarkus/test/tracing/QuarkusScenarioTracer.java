@@ -7,8 +7,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
+import org.apache.thrift.transport.TTransportException;
 
 import io.jaegertracing.internal.JaegerTracer;
 import io.jaegertracing.internal.reporters.RemoteReporter;
@@ -17,6 +18,7 @@ import io.jaegertracing.thrift.internal.senders.HttpSender;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
+import io.quarkus.test.bootstrap.ScenarioContext;
 import io.quarkus.test.configuration.PropertyLookup;
 
 public class QuarkusScenarioTracer {
@@ -27,7 +29,7 @@ public class QuarkusScenarioTracer {
     private final QuarkusScenarioSpan quarkusScenarioSpan;
     private final QuarkusScenarioTags quarkusScenarioTags;
 
-    public QuarkusScenarioTracer(String jaegerHttpEndpoint) {
+    public QuarkusScenarioTracer(String jaegerHttpEndpoint) throws TTransportException {
         String serviceName = new PropertyLookup("ts.service-name", DEFAULT_SERVICE_NAME).get();
 
         tracer = new JaegerTracer.Builder(serviceName).withReporter(new RemoteReporter.Builder()
@@ -39,25 +41,29 @@ public class QuarkusScenarioTracer {
         this.quarkusScenarioSpan = new QuarkusScenarioSpan(tracer, quarkusScenarioTags);
     }
 
-    public void finishWithSuccess(ExtensionContext extensionContext) {
-        finishWithSuccess(extensionContext, SUCCESS);
+    public void updateWithTag(ScenarioContext context, String tag) {
+        quarkusScenarioSpan.save(Collections.emptyMap(), newHashSet(tag), context);
     }
 
-    public void finishWithSuccess(ExtensionContext extensionContext, String tag) {
-        quarkusScenarioSpan.save(Collections.emptyMap(), newHashSet(tag), extensionContext).finish();
+    public void finishWithSuccess(ScenarioContext context) {
+        finishWithSuccess(context, SUCCESS);
     }
 
-    public void finishWithError(ExtensionContext extensionContext, Throwable cause) {
-        finishWithError(extensionContext, cause, ERROR);
+    public void finishWithSuccess(ScenarioContext context, String tag) {
+        quarkusScenarioSpan.save(Collections.emptyMap(), newHashSet(tag), context).finish();
     }
 
-    public void finishWithError(ExtensionContext extensionContext, Throwable cause, String tag) {
+    public void finishWithError(ScenarioContext context, Throwable cause) {
+        finishWithError(context, cause, ERROR);
+    }
+
+    public void finishWithError(ScenarioContext context, Throwable cause, String tag) {
         Map<String, ?> err = Map.of(Fields.EVENT, "error", Fields.ERROR_OBJECT, cause, Fields.MESSAGE, cause.getMessage());
-        quarkusScenarioSpan.save(err, newHashSet(tag), extensionContext).finish();
+        quarkusScenarioSpan.save(err, newHashSet(tag), context).finish();
     }
 
-    public Span createSpanContext(ExtensionContext extensionContext) {
-        return quarkusScenarioSpan.getOrCreate(extensionContext);
+    public Span createSpanContext(ScenarioContext context) {
+        return quarkusScenarioSpan.getOrCreate(context);
     }
 
     public Tracer getTracer() {
@@ -68,9 +74,9 @@ public class QuarkusScenarioTracer {
         return quarkusScenarioTags;
     }
 
-    private static Set<String> newHashSet(String value) {
+    private static Set<String> newHashSet(String... values) {
         Set<String> set = new HashSet<>();
-        set.add(value);
+        Stream.of(values).forEach(set::add);
         return set;
     }
 }

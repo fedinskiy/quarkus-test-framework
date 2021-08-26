@@ -1,5 +1,6 @@
 package io.quarkus.test.logging;
 
+import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -7,20 +8,13 @@ import java.util.stream.Stream;
 
 import org.apache.maven.shared.utils.StringUtils;
 
-import io.quarkus.test.bootstrap.ServiceContext;
-
-public abstract class LoggingHandler {
+public abstract class LoggingHandler implements Closeable {
 
     private static final long TIMEOUT_IN_MILLIS = 4000;
 
-    private final ServiceContext context;
     private Thread innerThread;
     private List<String> logs = new CopyOnWriteArrayList<>();
     private boolean running = false;
-
-    public LoggingHandler(ServiceContext context) {
-        this.context = context;
-    }
 
     protected abstract void handle();
 
@@ -33,6 +27,7 @@ public abstract class LoggingHandler {
     }
 
     public void stopWatching() {
+        flush();
         running = false;
         logs.clear();
         if (innerThread != null) {
@@ -52,6 +47,17 @@ public abstract class LoggingHandler {
         return logs().stream().anyMatch(line -> line.contains(expected));
     }
 
+    public void flush() {
+        handle();
+    }
+
+    @Override
+    public void close() {
+        if (running) {
+            stopWatching();
+        }
+    }
+
     protected void run() {
         while (running) {
             try {
@@ -66,8 +72,12 @@ public abstract class LoggingHandler {
     protected void onLine(String line) {
         logs.add(line);
         if (isLogEnabled()) {
-            Log.info(context.getOwner(), line);
+            logInfo(line);
         }
+    }
+
+    protected void logInfo(String line) {
+        Log.info(line);
     }
 
     protected void onLines(String lines) {
@@ -82,12 +92,8 @@ public abstract class LoggingHandler {
         }
     }
 
-    protected String contextName() {
-        return context.getName();
-    }
-
-    private boolean isLogEnabled() {
-        return context.getOwner().getConfiguration().isTrue("log.enable");
+    protected boolean isLogEnabled() {
+        return true;
     }
 
 }

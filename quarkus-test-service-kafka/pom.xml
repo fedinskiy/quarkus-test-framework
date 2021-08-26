@@ -4,12 +4,12 @@
     <parent>
         <groupId>io.quarkus.qe</groupId>
         <artifactId>quarkus-test-parent</artifactId>
-        <version>0.0.5-SNAPSHOT</version>
+        <version>0.0.8-SNAPSHOT</version>
     </parent>
     <artifactId>quarkus-test-service-kafka</artifactId>
     <name>Quarkus - Test Framework - Service - Kafka</name>
     <properties>
-        <strimzi.testcontainers.version>0.24.0</strimzi.testcontainers.version>
+        <strimzi.testcontainers.version>0.25.0</strimzi.testcontainers.version>
     </properties>
     <dependencies>
         <dependency>

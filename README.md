@@ -187,6 +187,17 @@ In a Multi-Module Maven test suite, if we want to configure the timeouts, we can
 - Increase the startup timeout only: `mvn clean verify -Dts.global.startup.timeout=20m`
 - Increase all the timeouts at once using the factor: `mvn clean verify -Dts.global.factor.timeout=2.5`
 
+- Ports
+
+The framework will allocate ports to deploy the services. We can configure the port range and the strategy to find an available port using:
+
+```
+ts.global.port.range.min=1100
+ts.global.port.range.max=49151
+## incremental (default) or random
+ts.global.port.resolution.strategy=incremental
+```
+
 ### Native
 
 The `@QuarkusScenario` annotation is also compatible with Native. This means that if we run our tests using Native build:
@@ -370,6 +381,8 @@ public class AuthzSecurityHttpsIT {
 
 This test will not run if the quarkus version is `1.13.X`.
 
+Moreover, if we are building Quarkus upstream ourselves, we can also disable tests on Quarkus upstream snapshot version (999-SNAPSHOT) using `@DisabledOnQuarkusSnapshot`.
+
 ### Containers 
 
 The framework also supports to deployment of third party components provided by docker. First, we need an additional module:
@@ -398,6 +411,11 @@ public class GreetingResourceIT {
     // ...
 }
 ```
+
+#### Privileged Mode
+Some containers require `--privileged` mode to run properly. This mode can be enabled on a per-container basis via property `ts.<YOUR SERVICE NAME>.container.privileged-mode=true` or for all containers via property `ts.global.container.privileged-mode=true`. This property only affects containers which are both: 
+1) Deployed on bare metal, not in Kubernetes/OpenShift.
+2) Use `@Container` annotation, not a specialised one(`@KafkaContainer`, `@AmqContainer`, etc).
 
 #### Kafka Containers
 
@@ -564,6 +582,30 @@ Modules within the testing framework must conform to the following package namin
 
 By default, the framework will run all the tests on bare metal (local machine). However, we can extend this functionality by adding other modules and annotating our tests.
 
+### Remote GIT repositories on Baremetal
+
+We can deploy a remote GIT repository using the annotation `@GitRepositoryQuarkusApplication`. Example:
+
+```java
+@QuarkusScenario
+public class QuickstartIT {
+
+    @GitRepositoryQuarkusApplication(repo = "https://github.com/quarkusio/quarkus-quickstarts.git", contextDir = "getting-started")
+    static final RestService app = new RestService();
+    //
+```
+
+This works on JVM and Native modes. For DEV mode, you need to set the devMode attribute as follows:
+
+```java
+@QuarkusScenario
+public class DevModeQuickstartIT {
+
+    @GitRepositoryQuarkusApplication(repo = "https://github.com/quarkusio/quarkus-quickstarts.git", contextDir = "getting-started", devMode = true)
+    static final RestService app = new RestService();
+    //
+```
+
 ### OpenShift
 
 Requirements:
@@ -593,6 +635,11 @@ test using:
 ```
 mvn clean verify -Dts.openshift.delete.project.after.all=false
 ```
+
+#### Print useful information on errors
+
+The test framework will print the project status, events and pod logs when a test fails. This functionality is enabled by default, 
+however it can be disabled using the property `-Dts.openshift.print.info.on.error=false`.
 
 #### Operators
 
@@ -771,6 +818,13 @@ public class OpenShiftS2iQuickstartIT {
     static final RestService app = new RestService();
     //
 ```
+
+This scenario will work for JVM and Native builds. In order to manage the base image in use, you need to provide the properties:
+- For JVM: `ts.global.s2i.quarkus.jvm.builder.image`
+- For Native: `ts.global.s2i.quarkus.native.builder.image`
+
+The way these properties are up to users. In the examples, we supply this configuration in the pom.xml as part of system properties (in the Maven failsafe plugin). 
+But we can provide a custom property by service in the `test.properties` file. For further information about how to customise the properties, go to the [Configuration](#configuration) section.
 
 It's important to note that, by default, OpenShift will build the application's source code using the Red Hat maven repository `https://maven.repository.redhat.com/ga/`. However, some applications might require some dependencies from other remote Maven repositories. In order to allow us to add another remote Maven repository, you can use `-Dts.global.s2i.maven.remote.repository=http://host:port/repo/name`. If you only want to configure different maven repositories by service, you can do it by replacing `global` to the service name, for example: `-Dts.pingPong.s2i.maven.remote.repository=...`.
 

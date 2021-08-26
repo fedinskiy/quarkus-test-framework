@@ -27,11 +27,11 @@ public abstract class QuarkusApplicationManagedResourceBuilder implements Manage
     public static final String QUARKUS_HTTP_SSL_PORT_PROPERTY = "quarkus.http.ssl-port";
     public static final int HTTP_PORT_DEFAULT = 8080;
 
+    protected static final Path RESOURCES_FOLDER = Paths.get("src", "main", "resources");
+
     private static final String BUILD_TIME_PROPERTIES = "/build-time-list";
-    private static final Path RESOURCES_FOLDER = Paths.get("src", "main", "resources");
     private static final Path TEST_RESOURCES_FOLDER = Paths.get("src", "test", "resources");
-    private static final String PROPERTIES_SUFFIX = ".properties";
-    private static final String APPLICATION_PROPERTIES = "application" + PROPERTIES_SUFFIX;
+    private static final String APPLICATION_PROPERTIES = "application.properties";
     private static final Set<String> BUILD_PROPERTIES = FileUtils.loadFile(BUILD_TIME_PROPERTIES).lines().collect(toSet());
 
     private Class<?>[] appClasses;
@@ -111,24 +111,47 @@ public abstract class QuarkusApplicationManagedResourceBuilder implements Manage
     protected void copyResourcesToAppFolder() {
         copyResourcesInFolderToAppFolder(RESOURCES_FOLDER);
         copyResourcesInFolderToAppFolder(TEST_RESOURCES_FOLDER);
-        PropertiesUtils.fromMap(createSnapshotOfBuildProperties(),
-                context.getServiceFolder().resolve(APPLICATION_PROPERTIES));
+        createEffectiveApplicationProperties();
+    }
+
+    protected Path getApplicationFolder() {
+        return context.getServiceFolder();
+    }
+
+    protected Path getResourcesApplicationFolder() {
+        return getApplicationFolder();
+    }
+
+    private void createEffectiveApplicationProperties() {
+        Path applicationProperties = getResourcesApplicationFolder().resolve(APPLICATION_PROPERTIES);
+        Map<String, String> map = new HashMap<>();
+        // Put the original application properties
+        if (Files.exists(applicationProperties)) {
+            map.putAll(PropertiesUtils.toMap(applicationProperties));
+        }
+
+        // Then put the build properties
+        map.putAll(context.getOwner().getProperties());
+        // Then replace the application properties
+        PropertiesUtils.fromMap(map, applicationProperties);
     }
 
     private boolean isBuildProperty(String name) {
-        return BUILD_PROPERTIES.stream().anyMatch(build -> name.matches(build) || name.startsWith(build));
+        return BUILD_PROPERTIES.stream().anyMatch(
+                build -> name.matches(build) // It's a regular expression
+                        || (build.endsWith(".") && name.startsWith(build)) // contains with
+                        || name.equals(build)); // or it's equal to
     }
 
     private void copyResourcesInFolderToAppFolder(Path folder) {
         try (Stream<Path> binariesFound = Files
                 .find(folder, Integer.MAX_VALUE,
-                        (path, basicFileAttributes) -> !Files.isDirectory(path)
-                                && !path.toFile().getName().contains(PROPERTIES_SUFFIX))) {
+                        (path, basicFileAttributes) -> !Files.isDirectory(path))) {
             binariesFound.forEach(path -> {
                 File fileToCopy = path.toFile();
 
                 Path source = folder.relativize(path).getParent();
-                Path target = context.getServiceFolder();
+                Path target = getResourcesApplicationFolder();
                 if (source != null) {
                     // Resource is in a sub-folder:
                     target = target.resolve(source);

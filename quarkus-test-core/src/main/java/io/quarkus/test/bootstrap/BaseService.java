@@ -12,10 +12,9 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-
-import org.junit.jupiter.api.extension.ExtensionContext;
 
 import io.quarkus.test.configuration.Configuration;
 import io.quarkus.test.logging.Log;
@@ -31,6 +30,8 @@ public class BaseService<T extends Service> implements Service {
     private static final String SERVICE_STARTUP_CHECK_POLL_INTERVAL = "startup.check-poll-interval";
     private static final Duration SERVICE_STARTUP_CHECK_POLL_INTERVAL_DEFAULT = Duration.ofSeconds(2);
 
+    private final ServiceLoader<ServiceListener> listeners = ServiceLoader.load(ServiceListener.class);
+
     private final List<Action> onPreStartActions = new LinkedList<>();
     private final List<Action> onPostStartActions = new LinkedList<>();
     private final Map<String, String> properties = new HashMap<>();
@@ -42,8 +43,18 @@ public class BaseService<T extends Service> implements Service {
     private ServiceContext context;
 
     @Override
+    public String getScenarioId() {
+        return context.getScenarioId();
+    }
+
+    @Override
     public String getName() {
         return serviceName;
+    }
+
+    @Override
+    public String getDisplayName() {
+        return managedResource.getDisplayName();
     }
 
     @Override
@@ -97,6 +108,7 @@ public class BaseService<T extends Service> implements Service {
             Log.debug(this, "Resource is not running");
             return false;
         } else if (managedResource.isFailed()) {
+            managedResource.stop();
             fail("Resource failed to start");
         }
 
@@ -142,13 +154,23 @@ public class BaseService<T extends Service> implements Service {
             return;
         }
 
-        Log.debug(this, "Starting service");
+        Log.debug(this, "Starting service (%s)", getDisplayName());
 
         onPreStartActions.forEach(a -> a.handle(this));
-        managedResource.start();
+        doStart();
         waitUntilServiceIsStarted();
         onPostStartActions.forEach(a -> a.handle(this));
-        Log.info(this, "Service started");
+        Log.info(this, "Service started (%s)", getDisplayName());
+    }
+
+    private void doStart() {
+        try {
+            managedResource.start();
+            listeners.forEach(ext -> ext.onServiceStarted(context));
+        } catch (Exception ex) {
+            listeners.forEach(ext -> ext.onServiceError(context, ex));
+            throw ex;
+        }
     }
 
     /**
@@ -160,19 +182,20 @@ public class BaseService<T extends Service> implements Service {
             return;
         }
 
-        Log.debug(this, "Stopping service");
+        Log.debug(this, "Stopping service (%s)", getDisplayName());
+        listeners.forEach(ext -> ext.onServiceStopped(context));
         managedResource.stop();
 
-        Log.info(this, "Service stopped");
+        Log.info(this, "Service stopped (%s)", getDisplayName());
     }
 
     @Override
-    public ServiceContext register(String serviceName, ExtensionContext testContext) {
+    public ServiceContext register(String serviceName, ScenarioContext context) {
         this.serviceName = serviceName;
         this.configuration = Configuration.load(serviceName);
-        this.context = new ServiceContext(this, testContext);
+        this.context = new ServiceContext(this, context);
         onPreStart(s -> futureProperties.forEach(Runnable::run));
-        testContext.getStore(ExtensionContext.Namespace.create(QuarkusScenarioBootstrap.class)).put(serviceName, this);
+        context.getTestStore().put(serviceName, this);
         return this.context;
     }
 

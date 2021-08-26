@@ -61,7 +61,7 @@ jobs:
     needs: validate-format
     strategy:
       matrix:
-        quarkus-version: ["2.1.0.Final"]
+        quarkus-version: ["1.13.7.Final", "current"]
         java: [ 11 ]
     steps:
       - uses: actions/checkout@v1
@@ -83,7 +83,11 @@ jobs:
              EXCLUDE_MODULES="-pl !examples/grpc"
           fi
 
-          mvn -fae -s .github/mvn-settings.xml clean install -Pframework,examples -Dvalidate-format -Dquarkus.platform.version="${{ matrix.quarkus-version }}" $EXCLUDE_MODULES
+          if [[ "${{ matrix.quarkus-version }}" != current ]]; then
+             QUARKUS_VERSION="-Dquarkus.platform.version=${{ matrix.quarkus-version }}"
+          fi
+
+          mvn -fae -s .github/mvn-settings.xml clean install -Pframework,examples -Dvalidate-format $QUARKUS_VERSION $EXCLUDE_MODULES
       - name: Zip Artifacts
         run: |
           zip -R artifacts-quarkus${{ matrix.quarkus-version }}-linux-jvm${{ matrix.java }}.zip '*-reports/*'
@@ -125,13 +129,6 @@ jobs:
       - name: Build Quarkus CLI
         run: |
           git clone https://github.com/quarkusio/quarkus.git && cd quarkus/devtools/cli && mvn -B -s ../../../.github/mvn-settings.xml clean install -Dquickly
-      - name: Install Quarkus CLI
-        run: |
-          cat <<EOF > ./quarkus-dev-cli
-          #!/bin/bash
-          java -jar $PWD/quarkus/devtools/cli/target/quarkus-cli-999-SNAPSHOT-runner.jar "\$@"
-          EOF
-          chmod +x ./quarkus-dev-cli
       - name: Install Quarkus CLI
         run: |
           cat <<EOF > ./quarkus-dev-cli

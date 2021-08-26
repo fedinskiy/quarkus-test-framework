@@ -43,6 +43,11 @@ public class OpenShiftStrimziKafkaContainerManagedResource implements ManagedRes
     }
 
     @Override
+    public String getDisplayName() {
+        return model.getImage() + ":" + model.getVersion();
+    }
+
+    @Override
     public void start() {
         if (running) {
             return;
@@ -103,7 +108,7 @@ public class OpenShiftStrimziKafkaContainerManagedResource implements ManagedRes
 
     private void createRegistryService() {
         registry = new DefaultService();
-        registry.register("registry", model.getContext().getTestContext());
+        registry.register("registry", model.getContext().getScenarioContext());
     }
 
     private void applyDeployment() {

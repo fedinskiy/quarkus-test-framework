@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.quarkus.qe</groupId>
         <artifactId>quarkus-test-parent</artifactId>
-        <version>0.0.5-SNAPSHOT</version>
+        <version>0.0.8-SNAPSHOT</version>
         <relativePath>../</relativePath>
     </parent>
     <artifactId>quarkus-test-core</artifactId>
@@ -52,6 +52,10 @@
         <dependency>
             <groupId>io.prometheus</groupId>
             <artifactId>simpleclient_pushgateway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.smallrye.reactive</groupId>
+            <artifactId>smallrye-mutiny-vertx-web-client</artifactId>
         </dependency>
     </dependencies>
 </project>

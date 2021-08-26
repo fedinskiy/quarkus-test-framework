@@ -1,5 +1,8 @@
 package io.quarkus.test.utils;
 
+import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.FileReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +27,7 @@ public final class MavenUtils {
     public static final String MVN_REPOSITORY_LOCAL = "maven.repo.local";
     public static final String SKIP_TESTS = "-DskipTests=true";
     public static final String SKIP_ITS = "-DskipITs=true";
+    public static final String DISPLAY_ERRORS = "-e";
     public static final String BATCH_MODE = "-B";
     public static final String DISPLAY_VERSION = "-V";
     public static final String SKIP_CHECKSTYLE = "-Dcheckstyle.skip";
@@ -35,9 +39,35 @@ public final class MavenUtils {
 
     }
 
+    public static void build(ServiceContext serviceContext, Path basePath, List<String> extraMavenArgs) {
+        List<String> command = mvnCommand(serviceContext);
+        command.addAll(extraMavenArgs);
+        command.add(PACKAGE_GOAL);
+        try {
+            new Command(command)
+                    .outputToConsole()
+                    .onDirectory(basePath)
+                    .runAndWait();
+
+        } catch (Exception e) {
+            fail("Failed to build Maven. Caused by: " + e.getMessage());
+        }
+    }
+
+    public static List<String> devModeMavenCommand(ServiceContext serviceContext, List<String> systemProperties) {
+        List<String> command = mvnCommand(serviceContext);
+        command.addAll(Arrays.asList(SKIP_CHECKSTYLE, SKIP_ITS));
+        command.addAll(systemProperties);
+        command.add(withProperty("debug", "false"));
+        command.add("quarkus:dev");
+
+        return command;
+    }
+
     public static List<String> mvnCommand(ServiceContext serviceContext) {
         List<String> args = new ArrayList<>();
         args.add(MVN_COMMAND);
+        args.add(DISPLAY_ERRORS);
         args.add(withQuarkusProfile(serviceContext));
         withMavenRepositoryLocalIfSet(args);
         withQuarkusProperties(args);
@@ -66,7 +96,7 @@ public final class MavenUtils {
 
     private static void installParentPom(Path relativePath) {
         List<String> args = new ArrayList<>();
-        args.addAll(Arrays.asList(MVN_COMMAND, INSTALL_GOAL, SKIP_CHECKSTYLE, SKIP_TESTS, SKIP_ITS, "-pl", "."));
+        args.addAll(asList(MVN_COMMAND, DISPLAY_ERRORS, INSTALL_GOAL, SKIP_CHECKSTYLE, SKIP_TESTS, SKIP_ITS, "-pl", "."));
         withMavenRepositoryLocalIfSet(args);
         withQuarkusProperties(args);
 

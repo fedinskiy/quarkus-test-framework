@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.quarkus.qe</groupId>
         <artifactId>quarkus-test-parent</artifactId>
-        <version>0.0.5-SNAPSHOT</version>
+        <version>0.0.8-SNAPSHOT</version>
     </parent>
     <artifactId>quarkus-test-images</artifactId>
     <name>Quarkus - Test Framework - Core - Images</name>
@@ -12,6 +12,14 @@
         <dependency>
             <groupId>io.quarkus.qe</groupId>
             <artifactId>quarkus-test-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-zerodep</artifactId>
         </dependency>
     </dependencies>
 </project>

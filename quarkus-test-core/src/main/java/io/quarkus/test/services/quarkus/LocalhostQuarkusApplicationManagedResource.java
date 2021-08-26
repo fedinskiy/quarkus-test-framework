@@ -6,6 +6,7 @@ import static io.quarkus.test.services.quarkus.QuarkusApplicationManagedResource
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 import io.quarkus.test.bootstrap.Protocol;
-import io.quarkus.test.logging.FileQuarkusApplicationLoggingHandler;
+import io.quarkus.test.logging.FileServiceLoggingHandler;
 import io.quarkus.test.logging.Log;
 import io.quarkus.test.logging.LoggingHandler;
 import io.quarkus.test.utils.ProcessBuilderProvider;
@@ -35,6 +36,7 @@ public abstract class LocalhostQuarkusApplicationManagedResource extends Quarkus
     private int assignedGrpcPort;
 
     public LocalhostQuarkusApplicationManagedResource(QuarkusApplicationManagedResourceBuilder model) {
+        super(model.getContext());
         this.model = model;
         this.logOutputFile = new File(model.getContext().getServiceFolder().resolve(LOG_OUTPUT_FILE).toString());
     }
@@ -56,10 +58,10 @@ public abstract class LocalhostQuarkusApplicationManagedResource extends Quarkus
             process = ProcessBuilderProvider.command(command)
                     .redirectErrorStream(true)
                     .redirectOutput(logOutputFile)
-                    .directory(model.getContext().getServiceFolder().toFile())
+                    .directory(getApplicationFolder().toFile())
                     .start();
 
-            loggingHandler = new FileQuarkusApplicationLoggingHandler(model.getContext(), logOutputFile);
+            loggingHandler = new FileServiceLoggingHandler(model.getContext().getOwner(), logOutputFile);
             loggingHandler.startWatching();
 
         } catch (Exception e) {
@@ -117,6 +119,10 @@ public abstract class LocalhostQuarkusApplicationManagedResource extends Quarkus
     @Override
     protected LoggingHandler getLoggingHandler() {
         return loggingHandler;
+    }
+
+    protected Path getApplicationFolder() {
+        return model.getContext().getServiceFolder();
     }
 
     private void assignPorts() {

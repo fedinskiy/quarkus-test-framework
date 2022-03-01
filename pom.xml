@@ -44,7 +44,7 @@
         <jaeger-client.version>1.6.0</jaeger-client.version>
         <prometheus.simpleclient_pushgateway.version>0.11.0</prometheus.simpleclient_pushgateway.version>
         <maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
-        <formatter-maven-plugin.version>2.16.0</formatter-maven-plugin.version>
+        <formatter-maven-plugin.version>2.18.0</formatter-maven-plugin.version>
         <impsort-maven-plugin.version>1.6.2</impsort-maven-plugin.version>
         <htmlunit.version>2.52.0</htmlunit.version>
         <xml-format-maven-plugin.version>3.2.0</xml-format-maven-plugin.version>

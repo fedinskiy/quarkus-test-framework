@@ -502,7 +502,7 @@ public final class OpenShiftClient {
             Class<? extends CustomResource<?, ? extends CustomResourceStatus>> crdType) {
         System.out.printf("Checking status of %s of type %s \n", crdType.getName(), crdType.getTypeName());
         CustomResource<?, ? extends CustomResourceStatus> customResource = client.resources(crdType).withName(name).get();
-        System.out.printf("Resource is %s \n", customResource);
+        System.out.printf("Resource is %s \n", customResource == null ? "null" : customResource.getKind());
         if (customResource == null
                 || customResource.getStatus() == null
                 || customResource.getStatus().getConditions() == null) {

@@ -11,7 +11,7 @@ jobs:
       matrix:
         java: [ 11 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Reclaim Disk Space
         run: .github/ci-prerequisites.sh
       - name: Install JDK {{ matrix.java }}
@@ -41,7 +41,7 @@ jobs:
         quarkus-version: ["current"]
         java: [ 11, 17 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Reclaim Disk Space
         run: .github/ci-prerequisites.sh
       - name: Install JDK {{ matrix.java }}
@@ -93,7 +93,7 @@ jobs:
         quarkus-version: ["999-SNAPSHOT"]
         java: [ 11, 17 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Reclaim Disk Space
         run: .github/ci-prerequisites.sh
       - name: Install JDK {{ matrix.java }}
@@ -205,7 +205,7 @@ jobs:
         quarkus-version: ["current", "999-SNAPSHOT"]
         java: [ 17 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Reclaim Disk Space
         run: .github/ci-prerequisites.sh
       - name: Install JDK {{ matrix.java }}
@@ -263,7 +263,7 @@ jobs:
         java: [ 11, 17 ]
         quarkus-version: ["999-SNAPSHOT"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install JDK {{ matrix.java }}
         uses: actions/setup-java@v3
         with:
@@ -317,7 +317,7 @@ jobs:
         quarkus-version: ["999-SNAPSHOT"]
         graalvm-version: [ "22.3.2"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install JDK {{ matrix.java }}
         uses: actions/setup-java@v3
         with:
@@ -387,7 +387,7 @@ jobs:
 #        quarkus-version: ["999-SNAPSHOT"]
 #        java: [ 11 ]
 #    steps:
-#      - uses: actions/checkout@v3
+#      - uses: actions/checkout@v4
 #      - name: Reclaim Disk Space
 #        run: .github/ci-prerequisites.sh
 #      - name: Install JDK {{ matrix.java }}
